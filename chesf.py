@@ -91,6 +91,17 @@ class CHeSF(object):
 
         return ret
 
+
+    def __wait_before_click(self, element, timeout=5):
+        if element.selector_type == 'css':
+            by = By.CSS_SELECTOR
+        elif element.selector_type == 'xpath':
+            by = By.XPATH
+        
+        WebDriverWait(self.__webdriver, 10).until(
+            EC.element_to_be_clickable((by, element.selector))
+        )
+
     
     def __enqueue(self, priority, data):
         """This private method is used to populate the priority queue
@@ -118,7 +129,7 @@ class CHeSF(object):
             queue_element = (1, self._url_counter, data)
         
         self.__queue.put_nowait(queue_element)
-        
+
 
     def enqueue_click(self, element, cb):
         """This is a convenience method that wraps a call to self.__enqueue,
@@ -238,6 +249,7 @@ class CHeSF(object):
                 self._request_callbacks['before']()
 
             if current_item[0] == 0:
+                self.__wait_before_click(current_item[2]['element'], 1)
                 print("--------------------------> clicking a link")
                 current_item[2]['element'].click()
             else:
@@ -267,12 +279,12 @@ class Element(object):
     
     def __init__(self, webelement, selector=None, selector_type=None):
         self.__webelement = webelement
-        self.__selector = selector
-        self.__selector_type = selector_type
+        self.selector = selector
+        self.selector_type = selector_type
         
 
     def __str__(self):
-        return 'Element obtained with (%s) selector: %s' %(self.__selector_type, self.__selector)
+        return 'Element obtained with (%s) selector: %s' %(self.selector_type, self.selector)
 
     
     def __repr__(self):
@@ -298,10 +310,14 @@ class Element(object):
             try: 
                 self.__webelement.click()
                 attempts = MAX_ATTEMPTS
-            except:
+            except StaleElementReferenceException:
                 self.refresh()
                 attempts += 1
                 print('Element refreshed!')
+            except WebDriverException:
+                attempts += 0.2
+                print('Element not clickable!')
+                
 
         
     def is_displayed(self):
@@ -311,10 +327,10 @@ class Element(object):
     def refresh(self):
         tmp = None
 
-        if self.__selector_type == 'css':
-            tmp = Element.chesf.css(self.__selector, 1)
-        elif self.__selector_type == 'xpath':
-            tmp = Element.chesf.xpath(self.__selector, 1)
+        if self.selector_type == 'css':
+            tmp = Element.chesf.css(self.selector, 1)
+        elif self.selector_type == 'xpath':
+            tmp = Element.chesf.xpath(self.selector, 1)
 
         # setting __webelement to tmp[0] could probably break in some
         # cases. A better implementation is needed
