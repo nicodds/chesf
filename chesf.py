@@ -18,7 +18,6 @@ from selenium.common.exceptions import *
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from time import sleep, time
 from queue import PriorityQueue
 
 
@@ -294,15 +293,15 @@ class Element(object):
     
     def click(self):
         attempts = 0
-        
+
         while attempts < MAX_ATTEMPTS:
             try: 
                 self.__webelement.click()
                 attempts = MAX_ATTEMPTS
-            except StaleElementReferenceException:
+            except:
                 self.refresh()
                 attempts += 1
-                print('Stale Element refreshed!')
+                print('Element refreshed!')
 
         
     def is_displayed(self):

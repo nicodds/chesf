@@ -38,7 +38,8 @@ class TripAdvisorScraper(CHeSF):
         # we set as hidden some divs that can intercept clicks on the
         # pagination links
         script = """
-        selectors = ['div[class="prw_rup prw_vr_listings_cross_sell_properties_hsx"]', 'div[class="vr_cross_sell_wrap"]'];
+        selectors = ['div[class="prw_rup prw_vr_listings_cross_sell_properties_hsx"]', 
+                     'div[class="vr_cross_sell_wrap"]'];
 
         for (i=0; i<selectors.length; i++) {
            d = document.querySelectorAll(selectors[i]);
