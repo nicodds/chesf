@@ -1,0 +1,7 @@
+__pycache__
+*.exe
+*~
+*.csv
+.#*
+#*
+desktop.ini
