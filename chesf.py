@@ -98,7 +98,7 @@ class CHeSF(object):
         elif element.selector_type == 'xpath':
             by = By.XPATH
         
-        WebDriverWait(self.__webdriver, 10).until(
+        WebDriverWait(self.__webdriver, timeout).until(
             EC.element_to_be_clickable((by, element.selector))
         )
 
@@ -315,7 +315,7 @@ class Element(object):
                 attempts += 1
                 print('Element refreshed!')
             except WebDriverException:
-                attempts += 0.2
+                attempts += 0.1
                 print('Element not clickable!')
                 
 
