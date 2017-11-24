@@ -87,7 +87,7 @@ class CHeSF(object):
                 ret = [Element(e, selector, method) for e in elements]
             except:
                 attempts += 1
-                print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s <<' %(selector))
+                #print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s <<' %(selector))
 
         return ret
 
@@ -250,11 +250,11 @@ class CHeSF(object):
 
             if current_item[0] == 0:
                 self.__wait_before_click(current_item[2]['element'], 1)
-                print("--------------------------> clicking a link")
+                #print("--------------------------> clicking a link")
                 current_item[2]['element'].click()
             else:
-                print("++++++++++++++++++++++++++> getting an url")
-                print(current_item[2]['url'])
+                #print("++++++++++++++++++++++++++> getting an url")
+                #print(current_item[2]['url'])
                 self.__webdriver.get(current_item[2]['url'])
 
             if self._request_callbacks['after']:
