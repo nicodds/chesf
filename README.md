@@ -1,4 +1,4 @@
-In the era of Machine Learning (ML) he web is an endless source of
+In the era of Machine Learning (ML) the web is an endless source of
 data. For this reason, there are plenty of good tools/frameworks to
 perform _scraping_ of web pages.
 
