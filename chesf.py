@@ -32,18 +32,22 @@ class CHeSF(object):
         In the future we'll add further options.
 
         """
+        self.__current_url = ''
+        self._url_counter  = 0
+        self._debug        = debug
         # in the future, we should check if the path exists, otherwise
         # raise an exception
-        self._url_counter = 0
-        self._debug = debug
         self.__driver_path = driver_path 
 
         # these options are somewhat fixed for the moment. In the
         # future will be passed through **kwargs
         self.__chrome_options = Options()
-        self.__chrome_options.add_argument('--disable-logging')
-        self.__chrome_options.add_argument('--log-level=3')
-        self.__chrome_options.add_argument('--silent')
+        
+        if not debug:
+            self.__chrome_options.add_argument('--disable-logging')
+            self.__chrome_options.add_argument('--log-level=3')
+            self.__chrome_options.add_argument('--silent')
+            
         self.__chrome_options.add_argument('--disable-gpu')
         self.__chrome_options.add_argument('--lang=en-US')
         self.__chrome_options.add_argument('--headless')
@@ -55,7 +59,7 @@ class CHeSF(object):
         
         self._request_callbacks = {'before': None, 'after': None}
         self.__queue = PriorityQueue()
-        Element.chesf = self
+        Element.chesf  = self
 
 
     def __get_elements(self, method, selector, timeout):
@@ -70,7 +74,7 @@ class CHeSF(object):
 
         """
         attempts = 0
-        ret = [] 
+        ret_elements = [] 
         by = ''
 
         if method == 'css':
@@ -84,23 +88,33 @@ class CHeSF(object):
                     EC.visibility_of_all_elements_located((by, selector))
                 )
                 attempts = MAX_ATTEMPTS
-                ret = [Element(e, selector, method) for e in elements]
+                ret_elements = [Element(e, selector, method) for e in elements]
             except:
                 attempts += 1
-                #print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s <<' %(selector))
+                if self._debug:
+                    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s <<' %(selector))
 
-        return ret
+        return ret_elements
 
 
-    def __wait_before_click(self, element, timeout=5):
+    def __wait_before_click(self, element, timeout=1):
+        attempts = 0
+
         if element.selector_type == 'css':
             by = By.CSS_SELECTOR
         elif element.selector_type == 'xpath':
             by = By.XPATH
         
-        WebDriverWait(self.__webdriver, timeout).until(
-            EC.element_to_be_clickable((by, element.selector))
-        )
+        while attempts < MAX_ATTEMPTS:
+            try:
+                WebDriverWait(self.__webdriver, timeout).until(
+                    EC.element_to_be_clickable((by, element.selector))
+                )
+                attempts = MAX_ATTEMPTS
+            except:
+                attempts += 1
+                if self._debug:
+                    print('Unable to find a clickable element with selector "%s"' %(selector))
 
     
     def __enqueue(self, priority, data):
@@ -146,7 +160,8 @@ class CHeSF(object):
         
         data = {'url': '', 'element': element, 'callback': cb}
         self.__enqueue(0, data)
-        print(">>>>>>>>> Enqueued element: %s" %(element))
+        if self._debug:
+            print(">>>>>>>>> Enqueued element: %s" %(element))
 
         
     def enqueue_url(self, url, cb):
@@ -164,7 +179,8 @@ class CHeSF(object):
         data = {'url': url, 'element': '', 'callback': cb}
         self._url_counter += 1
         self.__enqueue(1, data)
-        print("Enqueued url: %s (%i)" %(url, self._url_counter))
+        if self._debug:
+            print("Enqueued url: %s (%i)" %(url, self._url_counter))
 
         
     def register_callback(self, when, cb):
@@ -211,11 +227,17 @@ class CHeSF(object):
 
         """
 
-        message = """{}.parse callback is not defined. You should implement it
+        message = """%s parse callback is not defined. You should implement it
         for a correct use of the framework 
         """
         
-        raise NotImplementedError(message.format(self.__class__.__name__))
+        raise NotImplementedError(message %(self.__class__.__name__))
+
+
+    def current_url(self):
+        """ This methods returns the last requested url as a string
+        """
+        return self.__current_url
 
     
     def start(self, start_url):
@@ -233,28 +255,34 @@ class CHeSF(object):
         priority with respect to urls, and they are executed whenever
         one is inserted in the queue.
 
-        You could define further callbacks other than parse.
+        You could define further callbacks, other than parse.
 
         """
         self.enqueue_url(start_url, self.parse)
 
-        while not self.__queue.empty():
+        while True:
             # current_item is a list with 3 elements
             # - 0 is the main priority number (0 or 1)
             # - 1 is the secondary priority number (>= 0)
             # - 2 is the data
             current_item = self.__queue.get_nowait()
 
+            if current_item is None:
+                break
+
             if self._request_callbacks['before']:
                 self._request_callbacks['before']()
 
             if current_item[0] == 0:
-                self.__wait_before_click(current_item[2]['element'], 1)
-                #print("--------------------------> clicking a link")
+                self.__wait_before_click(current_item[2]['element'], timeout=0.5)
+                if self._debug:
+                    print("--------------------------> clicking a link")
                 current_item[2]['element'].click()
             else:
-                #print("++++++++++++++++++++++++++> getting an url")
-                #print(current_item[2]['url'])
+                if self._debug:
+                    print("++++++++++++++++++++++++++> getting an url")
+                    print(current_item[2]['url'])
+                self.__current_url = current_item[2]['url']
                 self.__webdriver.get(current_item[2]['url'])
 
             if self._request_callbacks['after']:
@@ -313,10 +341,12 @@ class Element(object):
             except StaleElementReferenceException:
                 self.refresh()
                 attempts += 1
-                print('Element refreshed!')
+                if Element.chesf._debug:
+                    print('Element refreshed!')
             except WebDriverException:
                 attempts += 0.1
-                print('Element not clickable!')
+                if Element.chesf._debug:
+                    print('Element not clickable!')
                 
 
         
@@ -326,14 +356,20 @@ class Element(object):
 
     def refresh(self):
         tmp = None
+        attempts = 0
 
-        if self.selector_type == 'css':
-            tmp = Element.chesf.css(self.selector, 1)
-        elif self.selector_type == 'xpath':
-            tmp = Element.chesf.xpath(self.selector, 1)
+        while attempts < MAX_ATTEMPTS:
+            if self.selector_type == 'css':
+                tmp = Element.chesf.css(self.selector, 1)
+            elif self.selector_type == 'xpath':
+                tmp = Element.chesf.xpath(self.selector, 1)
 
-        # setting __webelement to tmp[0] could probably break in some
-        # cases. A better implementation is needed
-        self.__webelement = tmp[0]
+            if len(tmp) > 0:
+                # setting __webelement to tmp[0] could probably break in some
+                # cases. A better implementation is needed
+                self.__webelement = tmp[0]
+                attempts = MAX_ATTEMPTS
+            else:
+                attempts += 1
 
 
