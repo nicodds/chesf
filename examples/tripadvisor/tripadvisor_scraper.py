@@ -124,7 +124,6 @@ class TripAdvisorScraper(CHeSF):
             links = self.call_js(script)
 
         for link in links:
-            print(link)
             self.enqueue_url(link, self.parse_hotel)
             self.property_urls.append(link)
 
