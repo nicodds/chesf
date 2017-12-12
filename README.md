@@ -38,7 +38,7 @@ CHeSF borrows its working philosophy (in part) from
 creating (at least) a python class.
 
 
-`
+```python
 import sys
 import os
 
@@ -96,7 +96,7 @@ except:
     scraper.quit()
 raise
 
-`
+```
 
 
 
