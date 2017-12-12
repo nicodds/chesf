@@ -37,9 +37,9 @@ class TripAdvisorScraper(CHeSF):
         self.register_callback('after', self._after_cb)
 
         self._js_code = {
-            'prepare': open('prepare.js', 'r').read(),
-            'parse_reviews': open('parse_reviews.js', 'r').read(),
-            'parse_property': open('parse_property.js', 'r').read()
+            'prepare': open('js/prepare.js', 'r').read(),
+            'parse_reviews': open('js/parse_reviews.js', 'r').read(),
+            'parse_property': open('js/parse_property.js', 'r').read()
         }
 
         self._reviews_file          = 'reviews.csv'
