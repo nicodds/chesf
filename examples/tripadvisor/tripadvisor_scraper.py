@@ -27,7 +27,7 @@ class TripAdvisorScraper(CHeSF):
     def __init__(self):
         # the ChromeDriver is in the same directory as the script,
         # change it appropriately
-        super().__init__('chromedriver.exe', debug=False)
+        super().__init__('chromedriver.exe', debug=True)
         self.reviews        = []
         self.properties     = []
         self.property_urls  = []
@@ -39,7 +39,9 @@ class TripAdvisorScraper(CHeSF):
         self._js_code = {
             'prepare': open('js/prepare.js', 'r').read(),
             'parse_reviews': open('js/parse_reviews.js', 'r').read(),
-            'parse_property': open('js/parse_property.js', 'r').read()
+            'parse_property': open('js/parse_property.js', 'r').read(),
+            'cb_before': open('js/cb_before.js').read(),
+            'cb_after': open('js/cb_after.js').read()
         }
 
         self._reviews_file          = 'reviews.csv'
@@ -58,50 +60,21 @@ class TripAdvisorScraper(CHeSF):
 
     def _before_cb(self):
         # we set as hidden some divs that can intercept clicks on the
-        # pagination links
-        script = """
-        selectors = ['div[class="prw_rup prw_vr_listings_cross_sell_properties_hsx"]', 
-                     'div[class="vr_cross_sell_wrap"]'];
-
-        for (i=0; i<selectors.length; i++) {
-           d = document.querySelectorAll(selectors[i]);
-
-           if (d.length > 0)
-               d[0].style.visibility = 'hidden';
-        }
-        """
-        self.call_js(script)
+        # pagination links.
+        # As a plus, we force ordering for popularity
+        self.call_js(self._js_code['cb_before'])
 
         
     def _after_cb(self):
         # remove some annoying elements
-        script = """
-        // a list of css classes to set as hidden in order to prevent they cover
-        // page elements that we want to click
-        css_classes = ['hsx_hd_cross_sell_properties wrap', 'loadingWhiteBox'];
-
-        for (i=0; i<css_classes.length; i++) {
-            d = document.getElementsByClassName(css_classes[i]);
-            if (d.length > 0)
-                d[0].style.visibility = 'hidden';
-        }
-
-        try {
-            // a click on the breadcrub bar to remove the calendar overlay
-            document.getElementById('taplc_trip_planner_breadcrumbs_0').click();
-        } catch(err) {
-            console.log(err);
-        }
-        """
-
-        self.call_js(script)
+#        self.call_js(self._js_code['cb_after'])
  
         # we add this call to wait for the given #id. If the id is not
-        # present, we will wait for 0.5*5 seconds
-        self.css('#taplc_trip_planner_breadcrumbs_0', 0.5)
+        # present, we will wait for 0.4*5 seconds
+        self.css('#taplc_trip_planner_breadcrumbs_0', timeout=0.4)
 
         # check if the page is still loading its results
-        loading = self.css('#taplc_hotels_loading_box_0', 0.2)
+        loading = self.css('#taplc_hotels_loading_box_0', timeout=0.2)
 
         if len(loading) > 0:
             while loading[0].is_displayed():
@@ -109,6 +82,8 @@ class TripAdvisorScraper(CHeSF):
 
 
     def parse(self):
+        # this is a fast hack, in the future it will be removed using command line
+        # options to instruct the program resume operations
         if self.current_url() == 'http://unrequested':
             links = self.read()
         else:
@@ -128,8 +103,9 @@ class TripAdvisorScraper(CHeSF):
             self.property_urls.append(link)
 
         print('Stored %i urls (for a total of %i)' %(len(links), self._url_counter))
-            
-        next_page = self.xpath('//a[@class="nav next taLnk ui_button primary"]', 1)
+        
+        next_page = self.css('a.nav.next.taLnk.ui_button.primary', timeout=1)
+        #next_page = self.xpath('//a[@class="nav next taLnk ui_button primary"]', timeout=1)
 
         if len(next_page) > 0:
             self.enqueue_click(next_page[0], self.parse)
@@ -141,6 +117,23 @@ class TripAdvisorScraper(CHeSF):
         # click on the radio button to select reviews in all available
         # languages and, if needed, disable any automatic translation.
         self.call_js(self._js_code['prepare'])
+            
+        if (self._property_url_is_first_request()):
+            self.requested_urls.append(self.current_url())
+            sleep(0.2)
+            # 0 property_id
+            # 1 property_name
+            # 2 property_reviews
+            # 3 property_rating
+            # 4 property_address
+            # 5 property_latitude
+            # 6 property_longitude
+            # 7 property_url
+            #
+            property_info = self.call_js(self._js_code['parse_property'])
+            self.properties.append(property_info)
+            print('****** Processing  property %i out of %i ******' %(len(self.requested_urls), len(self.property_urls)))
+            print('****** %s  (%i reviews) ******' %(property_info[1], int(property_info[2])))
 
         # for some weird reason I'm not able to figure out, performing
         # this click on javascript code doesn't work. So this code is
@@ -151,26 +144,16 @@ class TripAdvisorScraper(CHeSF):
         #
         # In a nutshell, this code expands the reviews that, if too
         # long, get truncated.
-        expand = self.css('span.taLnk.ulBlueLinks', 1);
-        if len(expand) > 0:
+        expand_selector = 'div.prw_rup.prw_reviews_text_summary_hsx>div>p>span.taLnk.ulBlueLinks'
+        expand = self.css(expand_selector, timeout=1);
+        expand_check = 0
+
+        while len(expand) > 0 and (expand_check < 3):
             expand[0].click()
             # I haven't found any way to avoid this sleep call
-            sleep(0.3)
-
-        #if (self._property_url_is_first_request()):
-        if True:
-            self.requested_urls.append(self.current_url())
-            # 0 property_id
-            # 1 property_name
-            # 2 property_reviews
-            # 3 property_rating
-            # 4 property_address
-            # 5 property_latitude
-            # 6 property_logitude
-            #
-            property_info = self.call_js(self._js_code['parse_property'])
-            self.properties.append(property_info)
-            print('****** Processing  property %i out of %i ******' %(len(self.requested_urls), len(self.property_urls)))
+            sleep(0.5)
+            expand = self.css(expand_selector, timeout=1);
+            expand_check += 1
 
         # call the script that parse the page and return all results as a 2D
         # list: the first dimension counts the number of reviews parsed (from
@@ -202,8 +185,8 @@ class TripAdvisorScraper(CHeSF):
 
         print('*** Stored %i reviews' %(len(results)))
 
-        selector = 'div.prw_rup.prw_common_north_star_pagination>div>span.nav.next.taLnk'
-        next_page = self.css(selector, 1)
+        selector = 'span.nav.next.taLnk'
+        next_page = self.css(selector, timeout=1)
 
         if len(next_page) > 0:
             self.enqueue_click(next_page[0], self.parse_hotel)
@@ -224,7 +207,7 @@ class TripAdvisorScraper(CHeSF):
             wr = csv.writer(props, lineterminator='\n')
             wr.writerow(['property_id', 'property_name', 'property_reviews',
                          'property_rating', 'property_address', 'property_latitude',
-                         'property_longitude'])
+                         'property_longitude', 'property_url'])
             wr.writerows(self.properties)
 
         with open(self._unrequested_urls_file, 'w', encoding='utf-8') as urls:
@@ -257,8 +240,10 @@ class TripAdvisorScraper(CHeSF):
 
 
 ######################################################################
+#start_url='https://www.tripadvisor.com/Hotels-g1024144-Poggiardo_Province_of_Lecce_Puglia-Hotels.html'
 start_url = 'https://www.tripadvisor.com/Hotels-g187791-c2-Rome_Lazio-Hotels.html'
 # start_url = 'http://unrequested'
+
 scraper = TripAdvisorScraper()
 
 try:

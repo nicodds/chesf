@@ -31,15 +31,15 @@ var parse_review = function (review_div) {
     	user      = review_div.querySelector("span.expand_inline.scrname").textContent;
     	title     = review_div.querySelector("span.noQuotes").textContent;
     	date      = review_div.querySelector("span.ratingDate.relativeDate").getAttribute("title");    
-    	text      = review_div.querySelector("div.wrap > div.prw_rup.prw_reviews_text_summary_hsx > div > p").textContent.replace(/(\r\n|\n|\r)/gm," ");
+    	text      = review_div.querySelector("div.prw_rup.prw_reviews_text_summary_hsx > div.entry > p").textContent.replace(/(\r\n|\n|\r)/gm," ");
 
-    	bubbles = review_div.querySelector("div.rating.reviewItemInline>span[class^=ui_bubble_rating]");
+    	bubbles = review_div.querySelector("div.reviewItemInline>span[class^=ui_bubble_rating]");
     	rating  = bubbles.getAttribute("class").split("_")[3]/10;
-
-	property_id = window.location.pathname.split('-')[2].replace('d', '');
+        property_id = window.location.pathname.split('-')[2].replace('d', '');
 
     } catch(err) {
-	   console.log(err);
+        console.log("+++++++++++++++++ Error parsing review data ++++++++++++++++++");
+        console.log(err);
     }
 
     return [title, date, rating, text, lang_placeholder, user, review_id, property_id];
@@ -48,8 +48,8 @@ var parse_review = function (review_div) {
 var reviews    = document.querySelectorAll("div.review-container");
 var processed  = [];
 
-for (var i=0; i<reviews.length; i++) {
-    processed.push(parse_review(reviews[i]));
+for (let review of reviews) {
+    processed.push(parse_review(review));
 }
 
 return processed;

@@ -13,6 +13,21 @@
  *    governing permissions and limitations under the License.
  */
 
+var map_url_parser = function (url) {
+    if (url.length > 100)
+        return url.split('&')[7].split('=')[1].split(',');
+    return [null, null]
+}
+
+var obj_to_string = function (ob) {
+    var address = (ob.streetAddress || '') + ', ';
+    address += (ob.postalCode || '') + ', ';
+    address += (ob.AddressLocality || '') + ', ';
+    address += ob.addressCountry.name || '';
+
+    return address;
+}
+
 var get_property_info = function () {
     var property_id      = null;
     var property_name    = null;
@@ -21,28 +36,33 @@ var get_property_info = function () {
     var longitude        = null;
     var property_reviews = null;
     var bubbles          = null;
-    var property_rating  = null;
+    var property_rating  = 0;
+    var property_url     = 0;
 
     try {
-    	property_name    = document.getElementById("HEADING").textContent;
-    	property_address = document.querySelector('div.blEntry.address.clickable>div.content.hidden').textContent
-    	property_reviews = document.querySelector("span[property=\"v:count\"]").textContent.replace(".", "");
-    	
-    	bubbles = document.querySelector("div.prw_rup.prw_common_bubble_rating.bubble_rating>span[class^=ui_bubble_rating]");
-    	property_rating  = bubbles.getAttribute("class").split("_")[3]/10;
+        let json_script = '';
+        
+        do {
+            json_script = document.querySelector('script[type="application/ld+json"]').textContent;
+        } while (json_script.length <= 0);
 
-        if (!(map0Div == null)) {
-            latitude  = map0Div.lat;
-            longitude = map0Div.lng;
+        json_data = JSON.parse(json_script);
+
+        [latitude, longitude] = map_url_parser(document.querySelector('div.prv_map.clickable>img').getAttribute('src'));
+	    property_id      = window.location.pathname.split('-')[2].replace('d', '');
+        property_url     = window.location.href;
+    	property_name    = json_data.name;
+    	property_address = obj_to_string(json_data.address);
+        if (json_data.hasOwnProperty('aggregateRating')) {
+            property_reviews = json_data.aggregateRating.reviewCount;
+            property_rating  = json_data.aggregateRating.ratingValue;
         }
-
-        property_id = window.location.pathname.split('-')[2].replace('d', '');
-	
     } catch(err) {
-	   console.log(err);
+        console.log("++++++++++++++++++ Error parsing property info ++++++++++++++++++");
+        console.log(err);
     }
 
-    return [property_id, property_name, property_reviews, property_rating, property_address, latitude, longitude];
+    return [property_id, property_name, property_reviews, property_rating, property_address, latitude, longitude, property_url];
 };
 
 

@@ -32,7 +32,7 @@ var prepare_page = function () {
 	   }
     }
 
-    // remove any automatic translation
+    // remove any automatic translation 
     var transl = document.querySelector("input.submitOnClick.no_cpu");
     if (!(transl == null) && !transl.checked) {
 	   try {  
