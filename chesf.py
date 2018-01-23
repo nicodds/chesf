@@ -260,7 +260,7 @@ class CHeSF(object):
         """
         self.enqueue_url(start_url, self.parse)
 
-        while True:
+        while (not self.__queue.empty()):
             # current_item is a list with 3 elements
             # - 0 is the main priority number (0 or 1)
             # - 1 is the secondary priority number (>= 0)
