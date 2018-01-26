@@ -18,7 +18,7 @@ var parse_review = function (review_div) {
     var user      = null;
     var title     = null;
     var date      = null;
-    var text      = null;
+    var text      = '';
     var bubbles   = null;
     var rating    = null; 
 
@@ -39,6 +39,7 @@ var parse_review = function (review_div) {
 
     } catch(err) {
         console.log("+++++++++++++++++ Error parsing review data ++++++++++++++++++");
+        console.log("................. "+user+" "+title+" "+text+" .................");
         console.log(err);
     }
 

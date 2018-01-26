@@ -13,9 +13,15 @@
  *    governing permissions and limitations under the License.
  */
 
-var map_url_parser = function (url) {
+var map_url_parser = function (img_element) {
+    var url = '';
+
+    if (img_element.hasAttribute('src'))
+        url = img_element.getAttribute('src');
+
     if (url.length > 100)
         return url.split('&')[7].split('=')[1].split(',');
+
     return [null, null]
 }
 
@@ -34,10 +40,10 @@ var get_property_info = function () {
     var property_address = null;
     var latitude         = null;
     var longitude        = null;
-    var property_reviews = null;
+    var property_reviews = 0;
     var bubbles          = null;
     var property_rating  = 0;
-    var property_url     = 0;
+    var property_url     = null;
 
     try {
         let json_script = '';
@@ -48,7 +54,8 @@ var get_property_info = function () {
 
         json_data = JSON.parse(json_script);
 
-        [latitude, longitude] = map_url_parser(document.querySelector('div.prv_map.clickable>img').getAttribute('src'));
+        if (document.querySelector('div.prv_map.clickable>img'))
+            [latitude, longitude] = map_url_parser(document.querySelector('div.prv_map.clickable>img'));
 	    property_id      = window.location.pathname.split('-')[2].replace('d', '');
         property_url     = window.location.href;
     	property_name    = json_data.name;

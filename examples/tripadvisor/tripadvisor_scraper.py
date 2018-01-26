@@ -27,7 +27,7 @@ class TripAdvisorScraper(CHeSF):
     def __init__(self):
         # the ChromeDriver is in the same directory as the script,
         # change it appropriately
-        super().__init__('chromedriver.exe', debug=True)
+        super().__init__('chromedriver.exe', debug=False)
         self.reviews        = []
         self.properties     = []
         self.property_urls  = []
@@ -67,11 +67,12 @@ class TripAdvisorScraper(CHeSF):
         
     def _after_cb(self):
         # remove some annoying elements
+        # (currently unused)
 #        self.call_js(self._js_code['cb_after'])
  
         # we add this call to wait for the given #id. If the id is not
-        # present, we will wait for 0.4*5 seconds
-        self.css('#taplc_trip_planner_breadcrumbs_0', timeout=0.4)
+        # present, we will wait for 0.3*5 seconds
+        self.css('#taplc_trip_planner_breadcrumbs_0', timeout=0.3)
 
         # check if the page is still loading its results
         loading = self.css('#taplc_hotels_loading_box_0', timeout=0.2)
@@ -104,7 +105,7 @@ class TripAdvisorScraper(CHeSF):
 
         print('Stored %i urls (for a total of %i)' %(len(links), self._url_counter))
         
-        next_page = self.css('a.nav.next.taLnk.ui_button.primary', timeout=1)
+        next_page = self.css('a.nav.next.taLnk.ui_button.primary', timeout=0.5)
         #next_page = self.xpath('//a[@class="nav next taLnk ui_button primary"]', timeout=1)
 
         if len(next_page) > 0:
@@ -120,7 +121,7 @@ class TripAdvisorScraper(CHeSF):
             
         if (self._property_url_is_first_request()):
             self.requested_urls.append(self.current_url())
-            sleep(0.2)
+            sleep(0.1)
             # 0 property_id
             # 1 property_name
             # 2 property_reviews
@@ -145,14 +146,14 @@ class TripAdvisorScraper(CHeSF):
         # In a nutshell, this code expands the reviews that, if too
         # long, get truncated.
         expand_selector = 'div.prw_rup.prw_reviews_text_summary_hsx>div>p>span.taLnk.ulBlueLinks'
-        expand = self.css(expand_selector, timeout=1);
+        expand = self.css(expand_selector, timeout=0.5);
         expand_check = 0
 
         while len(expand) > 0 and (expand_check < 3):
             expand[0].click()
             # I haven't found any way to avoid this sleep call
-            sleep(0.5)
-            expand = self.css(expand_selector, timeout=1);
+            sleep(0.6)
+            expand = self.css(expand_selector, timeout=0.5);
             expand_check += 1
 
         # call the script that parse the page and return all results as a 2D
@@ -186,7 +187,7 @@ class TripAdvisorScraper(CHeSF):
         print('*** Stored %i reviews' %(len(results)))
 
         selector = 'span.nav.next.taLnk'
-        next_page = self.css(selector, timeout=1)
+        next_page = self.css(selector, timeout=0.5)
 
         if len(next_page) > 0:
             self.enqueue_click(next_page[0], self.parse_hotel)
@@ -234,15 +235,14 @@ class TripAdvisorScraper(CHeSF):
         with open(self._unrequested_urls_file, 'r', encoding='utf-8') as urls:
             unrequested = [u.strip() for u in urls.readlines()]
 
-        self.enqueue_url('https://www.tripadvisor.com/Hotels-g187791-c2-Rome_Lazio-Hotels.html', self.parse)
+        #self.enqueue_url('https://www.tripadvisor.com/Hotels-g187791-c2-Rome_Lazio-Hotels.html', self.parse)
 
         return unrequested
 
 
 ######################################################################
-#start_url='https://www.tripadvisor.com/Hotels-g1024144-Poggiardo_Province_of_Lecce_Puglia-Hotels.html'
 start_url = 'https://www.tripadvisor.com/Hotels-g187791-c2-Rome_Lazio-Hotels.html'
-# start_url = 'http://unrequested'
+#start_url = 'http://unrequested'
 
 scraper = TripAdvisorScraper()
 
